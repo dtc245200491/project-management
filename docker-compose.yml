@@ -1,0 +1,281 @@
+version: '3.8'
+
+# ==============================================================================
+# PHÂN VÙNG MẠNG (NETWORK ISOLATION - HARDENING)
+# ==============================================================================
+networks:
+  frontend-net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.10.0/24
+
+  backend-net:
+    driver: bridge
+    internal: true # Mạng nội bộ tuyệt đối, ngăn chặn database truy cập ra Internet
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.20.0/24
+
+  monitoring-net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.30.0/24
+
+# ==============================================================================
+# LƯU TRỮ DỮ LIỆU BỀN VỮNG (NAMED VOLUMES)
+# ==============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+
+# ==============================================================================
+# DANH SÁCH CÁC SERVICES
+# ==============================================================================
+services:
+
+  # ----------------------------------------------------------------------------
+  # 1. NGINX REVERSE PROXY & HTTPS GATEWAY
+  # ----------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: pm_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certs:/etc/nginx/certs:ro
+    networks:
+      - frontend-net
+    depends_on:
+      pm-app:
+        condition: service_healthy
+      pgadmin:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+
+  # ----------------------------------------------------------------------------
+  # 2. PROJECT MANAGEMENT WEB APPLICATION (NODE.JS + EXPRESS + POSTGRESQL)
+  # ----------------------------------------------------------------------------
+  pm-app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: pm_app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - POSTGRES_HOST=postgres-db
+      - POSTGRES_PORT=5432
+    networks:
+      - frontend-net
+      - backend-net
+      - monitoring-net
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:1337/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # ----------------------------------------------------------------------------
+  # 3. POSTGRESQL DATABASE SERVER
+  # ----------------------------------------------------------------------------
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: pm_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend-net # Không mở cổng ra máy chủ host, chỉ kết nối mạng backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+
+  # ----------------------------------------------------------------------------
+  # 4. PGADMIN4 DATABASE MANAGEMENT GUI
+  # ----------------------------------------------------------------------------
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pm_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - frontend-net
+      - backend-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  # ----------------------------------------------------------------------------
+  # 5. CADVISOR - METRICS COLLECTOR
+  # ----------------------------------------------------------------------------
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    container_name: pm_cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - monitoring-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 256M
+
+  # ----------------------------------------------------------------------------
+  # 6. PROMETHEUS TIME-SERIES DB
+  # ----------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: pm_prometheus
+    restart: unless-stopped
+    user: "65534:65534"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+    networks:
+      - monitoring-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  # ----------------------------------------------------------------------------
+  # 7. GRAFANA DASHBOARD PLATFORM
+  # ----------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: pm_grafana
+    restart: unless-stopped
+    user: "472:472"
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards/json:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - monitoring-net
+      - frontend-net
+    depends_on:
+      - prometheus
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  # ----------------------------------------------------------------------------
+  # 8. GRAFANA LOKI - LOG STORAGE ENGINE
+  # ----------------------------------------------------------------------------
+  loki:
+    image: grafana/loki:2.8.2
+    container_name: pm_loki
+    restart: unless-stopped
+    user: "10001:10001"
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - monitoring-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  # ----------------------------------------------------------------------------
+  # 9. PROMTAIL - LOG AGENT / SHIPPER
+  # ----------------------------------------------------------------------------
+  promtail:
+    image: grafana/promtail:2.8.2
+    container_name: pm_promtail
+    restart: unless-stopped
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring-net
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 256M
