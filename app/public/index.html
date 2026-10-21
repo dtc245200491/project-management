@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hệ thống Quản lý Dự án | Project Management (Đề 14)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="h-full flex flex-col font-sans text-slate-800 antialiased">
+
+  <!-- TOP NAVIGATION BAR -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-100">
+          <i class="fa-solid fa-diagram-project text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 leading-tight">Project Management System</h1>
+          <p class="text-xs text-slate-500 font-medium">Đề 14: Triển khai & Quản trị Hệ thống Phần mềm</p>
+        </div>
+      </div>
+
+      <!-- Quick Action Buttons & System Status -->
+      <div class="flex items-center gap-3">
+        <div id="system-health-badge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="health-text">PostgreSQL: Connected</span>
+        </div>
+
+        <a href="/pgadmin/" target="_blank" class="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5" title="Mở pgAdmin">
+          <i class="fa-solid fa-database text-indigo-600"></i>
+          <span>pgAdmin</span>
+        </a>
+
+        <a href="http://localhost:3000" target="_blank" class="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5" title="Mở Grafana">
+          <i class="fa-solid fa-chart-line text-amber-500"></i>
+          <span>Grafana</span>
+        </a>
+
+        <button onclick="openModal('modal-task')" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm shadow-indigo-200 transition-all flex items-center gap-1.5">
+          <i class="fa-solid fa-plus"></i>
+          <span>Tạo Task</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WRAPPER -->
+  <div class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+
+    <!-- KPI STATS SUMMARY CARDS -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
+          <i class="fa-solid fa-folder-tree"></i>
+        </div>
+        <div>
+          <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Tổng Dự Án</span>
+          <h3 id="stat-projects" class="text-2xl font-bold text-slate-900">0</h3>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
+          <i class="fa-solid fa-list-check"></i>
+        </div>
+        <div>
+          <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Tổng Công Việc</span>
+          <h3 id="stat-tasks" class="text-2xl font-bold text-slate-900">0</h3>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div>
+          <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Tỷ Lệ Hoàn Thành</span>
+          <h3 id="stat-rate" class="text-2xl font-bold text-slate-900">0%</h3>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl">
+          <i class="fa-solid fa-users"></i>
+        </div>
+        <div>
+          <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Thành Viên Active</span>
+          <h3 id="stat-members" class="text-2xl font-bold text-slate-900">0</h3>
+        </div>
+      </div>
+    </section>
+
+    <!-- NAVIGATION TABS -->
+    <div class="border-b border-slate-200 flex items-center justify-between flex-wrap gap-4">
+      <nav class="flex gap-2 -mb-px">
+        <button onclick="switchTab('kanban')" id="tab-btn-kanban" class="tab-btn active px-4 py-2.5 text-sm font-semibold border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2">
+          <i class="fa-solid fa-table-columns"></i>
+          <span>Bảng Kanban</span>
+        </button>
+        <button onclick="switchTab('projects')" id="tab-btn-projects" class="tab-btn px-4 py-2.5 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-briefcase"></i>
+          <span>Dự Án</span>
+        </button>
+        <button onclick="switchTab('members')" id="tab-btn-members" class="tab-btn px-4 py-2.5 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-user-group"></i>
+          <span>Thành Viên</span>
+        </button>
+        <button onclick="switchTab('activity')" id="tab-btn-activity" class="tab-btn px-4 py-2.5 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>Nhật Ký (Logs)</span>
+        </button>
+      </nav>
+
+      <!-- Filter by Project -->
+      <div class="flex items-center gap-2 pb-2">
+        <label for="filter-project" class="text-xs font-medium text-slate-500">Lọc Dự án:</label>
+        <select id="filter-project" onchange="loadTasks()" class="text-xs font-medium bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="">Tất cả dự án</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- TAB 1: KANBAN BOARD -->
+    <div id="tab-kanban" class="tab-content flex-1 flex flex-col">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
+        
+        <!-- Column 1: TODO -->
+        <div class="kanban-column bg-slate-100 rounded-xl p-3 flex flex-col border border-slate-200/80">
+          <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-200">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-slate-400"></span>
+              <h4 class="font-semibold text-xs uppercase tracking-wider text-slate-700">Cần làm (To Do)</h4>
+            </div>
+            <span id="count-todo" class="px-2 py-0.5 text-xs font-bold bg-white text-slate-700 rounded-full border border-slate-200">0</span>
+          </div>
+          <div id="tasks-todo" class="task-list flex-1 flex flex-col gap-3 min-h-[350px]">
+            <!-- Dynamic task cards -->
+          </div>
+        </div>
+
+        <!-- Column 2: IN PROGRESS -->
+        <div class="kanban-column bg-slate-100 rounded-xl p-3 flex flex-col border border-slate-200/80">
+          <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-200">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+              <h4 class="font-semibold text-xs uppercase tracking-wider text-slate-700">Đang thực hiện</h4>
+            </div>
+            <span id="count-in_progress" class="px-2 py-0.5 text-xs font-bold bg-white text-slate-700 rounded-full border border-slate-200">0</span>
+          </div>
+          <div id="tasks-in_progress" class="task-list flex-1 flex flex-col gap-3 min-h-[350px]"></div>
+        </div>
+
+        <!-- Column 3: IN REVIEW -->
+        <div class="kanban-column bg-slate-100 rounded-xl p-3 flex flex-col border border-slate-200/80">
+          <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-200">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+              <h4 class="font-semibold text-xs uppercase tracking-wider text-slate-700">Chờ duyệt (Review)</h4>
+            </div>
+            <span id="count-review" class="px-2 py-0.5 text-xs font-bold bg-white text-slate-700 rounded-full border border-slate-200">0</span>
+          </div>
+          <div id="tasks-review" class="task-list flex-1 flex flex-col gap-3 min-h-[350px]"></div>
+        </div>
+
+        <!-- Column 4: DONE -->
+        <div class="kanban-column bg-slate-100 rounded-xl p-3 flex flex-col border border-slate-200/80">
+          <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-200">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+              <h4 class="font-semibold text-xs uppercase tracking-wider text-slate-700">Hoàn thành (Done)</h4>
+            </div>
+            <span id="count-done" class="px-2 py-0.5 text-xs font-bold bg-white text-slate-700 rounded-full border border-slate-200">0</span>
+          </div>
+          <div id="tasks-done" class="task-list flex-1 flex flex-col gap-3 min-h-[350px]"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 2: PROJECTS VIEW -->
+    <div id="tab-projects" class="tab-content hidden flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Danh Sách Dự Án Quản Lý</h2>
+          <p class="text-xs text-slate-500">Theo dõi tiến độ, ngân sách và trạng thái các dự án phòng ban</p>
+        </div>
+        <button onclick="openModal('modal-project')" class="px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm flex items-center gap-1.5">
+          <i class="fa-solid fa-plus"></i>
+          <span>Thêm Dự Án Mới</span>
+        </button>
+      </div>
+
+      <div id="projects-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Dynamic Projects Cards -->
+      </div>
+    </div>
+
+    <!-- TAB 3: MEMBERS VIEW -->
+    <div id="tab-members" class="tab-content hidden flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Đội Ngũ Thực Hiện & Phân Quyền</h2>
+          <p class="text-xs text-slate-500">Danh sách nhân sự tham gia vận hành và phát triển hệ thống</p>
+        </div>
+        <button onclick="openModal('modal-member')" class="px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm flex items-center gap-1.5">
+          <i class="fa-solid fa-user-plus"></i>
+          <span>Thêm Thành Viên</span>
+        </button>
+      </div>
+
+      <div id="members-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <!-- Dynamic Members Cards -->
+      </div>
+    </div>
+
+    <!-- TAB 4: AUDIT ACTIVITY LOGS -->
+    <div id="tab-activity" class="tab-content hidden flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Nhật Ký Hoạt Động (Audit Trail)</h2>
+          <p class="text-xs text-slate-500">Ghi lại toàn bộ hành vi tạo, sửa, xóa dự án và công việc trong hệ thống</p>
+        </div>
+        <button onclick="loadActivityLogs()" class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg flex items-center gap-1">
+          <i class="fa-solid fa-arrows-rotate"></i>
+          <span>Làm mới</span>
+        </button>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
+          <thead class="bg-slate-50 text-slate-500 font-semibold uppercase">
+            <tr>
+              <th class="px-4 py-3">Thời gian</th>
+              <th class="px-4 py-3">Hành động</th>
+              <th class="px-4 py-3">Chi tiết nhật ký</th>
+            </tr>
+          </thead>
+          <tbody id="logs-tbody" class="divide-y divide-slate-100 font-medium">
+            <!-- Dynamic rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+      <div>
+        <span>Báo cáo thực hành Triển khai & Quản trị Hệ thống Phần mềm - </span>
+        <strong class="text-slate-700">Đề bài 14: Project Management</strong>
+      </div>
+      <div class="flex items-center gap-4">
+        <span>Stack: Docker Compose, Nginx SSL, PostgreSQL, Prometheus, Grafana, Loki</span>
+        <a href="/metrics" target="_blank" class="text-indigo-600 hover:underline flex items-center gap-1">
+          <i class="fa-solid fa-code"></i> /metrics
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ======================================================================= -->
+  <!-- MODALS -->
+  <!-- ======================================================================= -->
+
+  <!-- 1. MODAL TẠO TASK MỚI -->
+  <div id="modal-task" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-square-plus text-indigo-600"></i>
+          <span>Thêm Công Việc Mới (Task)</span>
+        </h3>
+        <button onclick="closeModal('modal-task')" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="form-task" onsubmit="handleCreateTask(event)" class="mt-4 flex flex-col gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Tiêu đề công việc <span class="text-rose-500">*</span></label>
+          <input type="text" id="task-title" required class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="VD: Cấu hình Prometheus scraper">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mô tả công việc</label>
+          <textarea id="task-desc" rows="2" class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Chi tiết yêu cầu kỹ thuật..."></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Thuộc dự án</label>
+            <select id="task-project" class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Người phụ trách</label>
+            <select id="task-assignee" class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"></select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Trạng thái</label>
+            <select id="task-status" class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <option value="todo">Cần làm (Todo)</option>
+              <option value="in_progress">Đang làm</option>
+              <option value="review">Chờ duyệt</option>
+              <option value="done">Hoàn thành</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Mức ưu tiên</label>
+            <select id="task-priority" class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <option value="low">Thấp (Low)</option>
+              <option value="medium" selected>Vừa (Medium)</option>
+              <option value="high">Cao (High)</option>
+              <option value="urgent">Khẩn cấp (Urgent)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Hạn chót (Deadline)</label>
+            <input type="date" id="task-due" class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div class="mt-4 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeModal('modal-task')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Hủy</button>
+          <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm">Lưu Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. MODAL TẠO DỰ ÁN MỚI -->
+  <div id="modal-project" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-folder-plus text-indigo-600"></i>
+          <span>Thêm Dự Án Mới</span>
+        </h3>
+        <button onclick="closeModal('modal-project')" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="form-project" onsubmit="handleCreateProject(event)" class="mt-4 flex flex-col gap-3">
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Tên Dự án <span class="text-rose-500">*</span></label>
+            <input type="text" id="project-name" required class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="VD: Nâng cấp Core Banking">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Mã (Key) <span class="text-rose-500">*</span></label>
+            <input type="text" id="project-key" required class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="PRJ-15">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mô tả dự án</label>
+          <textarea id="project-desc" rows="2" class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Mục tiêu và phạm vi triển khai..."></textarea>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Trạng thái</label>
+            <select id="project-status" class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <option value="Active">Đang chạy (Active)</option>
+              <option value="Planning">Lập kế hoạch</option>
+              <option value="Completed">Hoàn thành</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Độ ưu tiên</label>
+            <select id="project-priority" class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <option value="Low">Thấp</option>
+              <option value="Medium" selected>Vừa</option>
+              <option value="High">Cao</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Hạn hoàn thành</label>
+            <input type="date" id="project-deadline" class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Ngân sách dự kiến (VND)</label>
+          <input type="number" id="project-budget" value="10000000" class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+
+        <div class="mt-4 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeModal('modal-project')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Hủy</button>
+          <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm">Tạo Dự Án</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. MODAL THÊM THÀNH VIÊN MỚI -->
+  <div id="modal-member" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-user-plus text-indigo-600"></i>
+          <span>Thêm Thành Viên Mới</span>
+        </h3>
+        <button onclick="closeModal('modal-member')" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="form-member" onsubmit="handleCreateMember(event)" class="mt-4 flex flex-col gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Họ và tên <span class="text-rose-500">*</span></label>
+          <input type="text" id="member-name" required class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="VD: Nguyễn Văn A">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Email <span class="text-rose-500">*</span></label>
+          <input type="email" id="member-email" required class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="a.nguyen@pm.local">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Vai trò / Chức danh</label>
+          <select id="member-role" class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <option value="Project Manager">Project Manager</option>
+            <option value="Tech Lead">Tech Lead</option>
+            <option value="DevOps Engineer">DevOps Engineer</option>
+            <option value="Frontend Developer">Frontend Developer</option>
+            <option value="Backend Developer">Backend Developer</option>
+            <option value="QA / Tester">QA / Tester</option>
+          </select>
+        </div>
+
+        <div class="mt-4 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeModal('modal-member')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Hủy</button>
+          <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm">Thêm Mới</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- APPLICATION SCRIPT -->
+  <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "project-management-system",
+  "version": "1.0.0",
+  "description": "Project, Task & Team Management System for Topic 14 - Software Deployment and System Administration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.11.5",
+    "prom-client": "^15.1.2",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
