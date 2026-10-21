@@ -1,0 +1,170 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "HẠ TẦNG VÀ TÀI NGUYÊN CONTAINERS (CADVISOR + PROMETHEUS)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "axisCenteredZero": false, "drawStyle": "line", "lineInterpolation": "smooth" },
+          "unit": "percent"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "id": 1,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{name=~\"pm_.*\"}[1m])) by (name) * 100",
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Tỷ Lệ Tiêu Thụ CPU Theo Container (%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "axisCenteredZero": false, "drawStyle": "line", "lineInterpolation": "smooth" },
+          "unit": "decmbytes"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{name=~\"pm_.*\"}) by (name) / 1024 / 1024",
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Dung Lượng Bộ Nhớ RAM Sử Dụng (MB)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "line" },
+          "unit": "Bps"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "sum(rate(container_network_receive_bytes_total{name=~\"pm_.*\"}[1m])) by (name)",
+          "legendFormat": "In: {{name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Lưu Lượng Mạng Tải Về (Receive Bytes/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "line" },
+          "unit": "Bps"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "sum(rate(container_network_transmit_bytes_total{name=~\"pm_.*\"}[1m])) by (name)",
+          "legendFormat": "Out: {{name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Lưu Lượng Mạng Truyền Đi (Transmit Bytes/s)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
+      "id": 200,
+      "title": "HIỆU NĂNG VÀ NGHIỆP VỤ ỨNG DỤNG QUẢN LÝ DỰ ÁN",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "unit": "reqps" }
+      },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 18 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[1m])) by (code)",
+          "legendFormat": "HTTP Code: {{code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP Request Rate (req/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "unit": "none" }
+      },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 18 },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "pm_tasks_total",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Thống Kê Công Việc Theo Trạng Thái (Tasks)",
+      "type": "barchart"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "unit": "none" }
+      },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 18 },
+      "id": 7,
+      "targets": [
+        {
+          "expr": "pm_projects_total",
+          "legendFormat": "Tổng dự án",
+          "refId": "A"
+        }
+      ],
+      "title": "Tổng Số Dự Án Đang Quản Lý",
+      "type": "stat"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["devops", "monitoring", "de14"],
+  "time": { "from": "now-15m", "to": "now" },
+  "title": "Hệ thống Quản lý Dự án (Đề 14) - Tổng Quan",
+  "uid": "pm-system-overview",
+  "version": 1
+}

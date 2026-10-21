@@ -1,0 +1,25 @@
+# ==============================================================================
+# PROMETHEUS CONFIGURATION (ĐỀ 14)
+# ==============================================================================
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # 1. Prometheus Internal Metrics
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 2. Container Hardware & Resource Metrics (cAdvisor)
+  - job_name: 'cadvisor'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  # 3. Application Performance & Business Metrics (Project Management App)
+  - job_name: 'pm_web_app'
+    scrape_interval: 5s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['pm-app:1337']
