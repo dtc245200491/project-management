@@ -8,8 +8,8 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Khởi tạo non-root user và group (UID 1000)
-RUN addgroup -g 1000 appgroup && \
-    adduser -u 1000 -G appgroup -s /bin/sh -D appuser
+RUN addgroup -g 1001 appgroup && \
+    adduser -u 1001 -G appgroup -s /bin/sh -D appuser
 
 # Copy package descriptors trước để tận dụng Docker layer caching
 COPY package*.json ./
